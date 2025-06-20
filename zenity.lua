@@ -1,7 +1,7 @@
 local process = require "@lune/process"
 local task = require "@lune/task"
 local fs = require "@lune/fs"
-local shared = require "shared"
+local shared = require "@self/shared"
 
 --[=[
     Lune module for working with zenity.
@@ -39,12 +39,12 @@ local function zenityPushOptions(command: {string}, options: ZenityOptions)
     end
 end
 
-local function zenityExecute(command: {string}, options: ZenityOptions?, procOptions: process.SpawnOptions?)
+local function zenityExecute(command: {string}, options: ZenityOptions?, procOptions: process.ExecOptions?)
     if options ~= nil then
         zenityPushOptions(command, options)
     end
 
-    local result = process.spawn("zenity", command, procOptions)
+    local result = process.exec("zenity", command, procOptions)
 
     return result
 end
@@ -220,8 +220,8 @@ type ZenityProgressOptions = {
 local ZenityProgressBar = {}
 ZenityProgressBar.__index = ZenityProgressBar
 function ZenityProgressBar.new(start_percentage: number, progress_options: ZenityProgressOptions?, options: ZenityOptions?)
-    local pipePath = clean(process.spawn("mktemp", {"-u"}).stdout)
-    local pipeOut = clean(process.spawn("mktemp", {"-u"}).stdout)
+    local pipePath = clean(process.exec("mktemp", {"-u"}).stdout)
+    local pipeOut = clean(process.exec("mktemp", {"-u"}).stdout)
     local command = {"zenity", "--progress"}
     if progress_options then
         for option, value in progress_options do
@@ -233,8 +233,8 @@ function ZenityProgressBar.new(start_percentage: number, progress_options: Zenit
     if options then
         zenityPushOptions(command, options)
     end
-    process.spawn("mkfifo", {pipePath})
-    process.spawn("mkfifo", {pipeOut})
+    process.exec("mkfifo", {pipePath})
+    process.exec("mkfifo", {pipeOut})
     local bashScript = ([=[#!/bin/bash
         (while [[ $n -lt 100 ]]
         do
@@ -248,7 +248,7 @@ function ZenityProgressBar.new(start_percentage: number, progress_options: Zenit
         echo "dead" > %s]=]):format(pipePath, table.concat(command, " "), pipeOut)
 
     task.spawn(function()
-        process.spawn("bash", {"-c", bashScript})
+        process.exec("bash", {"-c", bashScript})
     end)
 
     local progressBar = {
@@ -269,20 +269,20 @@ end
 type ZenityProgressBar = typeof(ZenityProgressBar.new(0))
 function ZenityProgressBar:SetLabelText(text: string)
     if not self.alive then return end
-    process.spawn("bash", {"-c", `echo "# {text}" > {self.pipe}`})
+    process.exec("bash", {"-c", `echo "# {text}" > {self.pipe}`})
 end
 function ZenityProgressBar:SetProgress(n: number)
     self.progress = n
     if not self.alive then return end
     self.alive = n < 100
-    process.spawn("bash", {"-c", `echo "{n}" > {self.pipe}`})
+    process.exec("bash", {"-c", `echo "{n}" > {self.pipe}`})
 end
 function ZenityProgressBar:GetProgress() : number
     return self.progress
 end
 function ZenityProgressBar:Close()
     if not self.alive then return end
-    process.spawn("bash", {"-c", `echo "100" > {self.pipe}`})
+    process.exec("bash", {"-c", `echo "100" > {self.pipe}`})
 end
 
 function zenity.progress(text: string, start_percentage: number?, progress_options: ZenityProgressOptions?, options: ZenityOptions?)

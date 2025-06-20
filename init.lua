@@ -2,9 +2,9 @@ local process = require "@lune/process"
 local stdio = require "@lune/stdio"
 local DateTime = require "@lune/datetime"
 
-local zenity = require "zenity"
-local kdialog = require "kdialog"
-local notify = require "notify"
+local zenity = require "@self/zenity"
+local kdialog = require "@self/kdialog"
+local notify = require "@self/notify"
 
 local dialog = {
     zenity = zenity,
@@ -15,7 +15,7 @@ local dialog = {
 local PREFERRED_INTERFACE: "kdialog" | "zenity" | "none" = "none"
 do
     local function findBinary(name: string) : boolean
-        local result = process.spawn("whereis", {name})
+        local result = process.exec("whereis", {name})
         if not result.ok then return false end
         local path = result.stdout:gsub(`^{name}:`, "")
         return not (path == "")

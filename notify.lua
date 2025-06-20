@@ -3,7 +3,7 @@ local process = require "@lune/process"
 do
     local stdio = require "@lune/stdio"
     local function findBinary(name: string) : boolean
-        local result = process.spawn("whereis", {name})
+        local result = process.exec("whereis", {name})
         if not result.ok then return false end
         local path = result.stdout:gsub(`^{name}:`, "")
         return not (path == "")
@@ -55,7 +55,7 @@ return function(title: string, summary: string, body: string?, options: Notifica
         table.insert(arguments, body)
     end
 
-    local out = process.spawn("notify-send", arguments)
+    local out = process.exec("notify-send", arguments)
     if out.stdout == "" then return 0 end
     return tonumber(out.stdout:match("%d+"))
 end

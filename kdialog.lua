@@ -1,5 +1,5 @@
 local process = require "@lune/process"
-local shared = require "shared"
+local shared = require "@self/shared"
 
 --[=[
     Lune module for working with kdialog.
@@ -24,7 +24,7 @@ export type KDialogOptions = {
 local clean = shared.clean
 local replaceHome = shared.replaceHome
 
-local function kdialogExecute(command: {string}, options: KDialogOptions?) : process.SpawnResult
+local function kdialogExecute(command: {string}, options: KDialogOptions?) : process.ExecResult
     if options ~= nil then
         for option, value in pairs(options) do
             if option == "geometry" then
@@ -37,7 +37,7 @@ local function kdialogExecute(command: {string}, options: KDialogOptions?) : pro
         end
     end
 
-    local result = process.spawn("kdialog", command)
+    local result = process.exec("kdialog", command)
 
     return result
 end
@@ -262,10 +262,10 @@ function KDialogProgressBar.new(reference: string, path: string, autoclose: bool
 end
 type KDialogProgressBar = typeof(KDialogProgressBar.new("", "", false, 0))
 function KDialogProgressBar:SetLabelText(text: string)
-    process.spawn("qdbus", {self.reference, self.path, "setLabelText", text})
+    process.exec("qdbus", {self.reference, self.path, "setLabelText", text})
 end
 function KDialogProgressBar:SetProgress(n: number)
-    process.spawn("qdbus", {self.reference, self.path, "Set", "", "value", tonumber(n)})
+    process.exec("qdbus", {self.reference, self.path, "Set", "", "value", tonumber(n)})
     self.progress = n
     if self.autoclose and n == self.size then
         self:Close()
@@ -275,7 +275,7 @@ function KDialogProgressBar:GetProgress() : number
     return self.progress
 end
 function KDialogProgressBar:Close()
-    process.spawn("qdbus", {self.reference, self.path, "close"})
+    process.exec("qdbus", {self.reference, self.path, "close"})
     self.alive = false
 end
 

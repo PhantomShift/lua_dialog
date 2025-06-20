@@ -9,14 +9,16 @@ local notify = require "@self/notify"
 local dialog = {
     zenity = zenity,
     kdialog = kdialog,
-    notify = notify
+    notify = notify,
 }
 
 local PREFERRED_INTERFACE: "kdialog" | "zenity" | "none" = "none"
 do
-    local function findBinary(name: string) : boolean
-        local result = process.exec("whereis", {name})
-        if not result.ok then return false end
+    local function findBinary(name: string): boolean
+        local result = process.exec("whereis", { name })
+        if not result.ok then
+            return false
+        end
         local path = result.stdout:gsub(`^{name}:`, "")
         return not (path == "")
     end
@@ -39,7 +41,9 @@ do
         elseif xdg_desktop == "GNOME" or xdg_desktop == "GTK" then
             PREFERRED_INTERFACE = "zenity"
         else
-            stdio.ewrite("[WARNING] lua_dialog is unsure which interface this desktop prefers; defaulting to zenity, even if it is not installed\n")
+            stdio.ewrite(
+                "[WARNING] lua_dialog is unsure which interface this desktop prefers; defaulting to zenity, even if it is not installed\n"
+            )
             PREFERRED_INTERFACE = "zenity"
         end
     end
@@ -52,14 +56,16 @@ function dialog.overridePreferredInterface(interface: "kdialog" | "zenity")
 end
 
 export type DialogOptions = {
-    title:          string?,
-    geometry:       {number}?,
-    ok_label:       string?,
-    cancel_label:   string?
+    title: string?,
+    geometry: { number }?,
+    ok_label: string?,
+    cancel_label: string?,
 }
 
-local function dialogToZennity(options: DialogOptions?) : zenity.ZenityOptions?
-    if not options then return nil end
+local function dialogToZennity(options: DialogOptions?): zenity.ZenityOptions?
+    if not options then
+        return nil
+    end
 
     local result = {
         title = options.title,
@@ -74,7 +80,7 @@ local function dialogToZennity(options: DialogOptions?) : zenity.ZenityOptions?
 
     return result :: zenity.ZenityOptions
 end
-local function dialogToKdialog(options: DialogOptions?) : kdialog.KDialogOptions?
+local function dialogToKdialog(options: DialogOptions?): kdialog.KDialogOptions?
     return options :: kdialog.KDialogOptions?
 end
 
@@ -90,7 +96,7 @@ function dialog.yesNoCancel(text: string, options: DialogOptions?)
         return kdialog.yesNoCancel(text, dialogToKdialog(options))
     end
     local ops = dialogToZennity(options) or {} :: zenity.ZenityOptions
-    ops.extra_buttons = {"Cancel"}
+    ops.extra_buttons = { "Cancel" }
     return zenity.question(text, nil, nil, ops):lower()
 end
 
@@ -100,7 +106,7 @@ function dialog.warningYesNo(text: string, options: DialogOptions?)
     end
     local ops = dialogToZennity(options) or {} :: zenity.ZenityOptions
     ops.ok_label = "Yes"
-    ops.extra_buttons = {"No"}
+    ops.extra_buttons = { "No" }
     return zenity.warning(text, nil, nil, ops) == "yes"
 end
 
@@ -110,7 +116,7 @@ function dialog.warningYesNoCancel(text: string, options: DialogOptions?)
     end
     local ops = dialogToZennity(options) or {} :: zenity.ZenityOptions
     ops.ok_label = "Yes"
-    ops.extra_buttons = {"No", "Cancel"}
+    ops.extra_buttons = { "No", "Cancel" }
     return zenity.warning(text, nil, nil, ops):lower()
 end
 
@@ -120,7 +126,7 @@ function dialog.warningContinueCancel(text: string, options: DialogOptions?)
     end
     local ops = dialogToZennity(options) or {} :: zenity.ZenityOptions
     ops.ok_label = "Continue"
-    ops.extra_buttons = {"Cancel"}
+    ops.extra_buttons = { "Cancel" }
     return zenity.warning(text, nil, nil, ops) == "yes"
 end
 
@@ -165,10 +171,10 @@ function dialog.newPassword(text: string, options: DialogOptions?)
     end
     local opts = dialogToZennity(options) or {} :: zenity.ZenityOptions
     local formEntries = {
-        {type = "password", name = "New Password"},
-        {type = "password", name = "Confirm"}
+        { type = "password", name = "New Password" },
+        { type = "password", name = "Confirm" },
     }
-    local formOptions = {text = "Enter a New Password"}
+    local formOptions = { text = "Enter a New Password" }
     local out
     repeat
         out = zenity.form(formEntries, formOptions, opts)
@@ -193,7 +199,7 @@ function dialog.textBox(file_path: string, options: DialogOptions?)
     end
     return zenity.textInfo({
         editable = false,
-        filename = file_path
+        filename = file_path,
     }, dialogToZennity(options))
 end
 
@@ -206,39 +212,42 @@ function dialog.textBoxInput(text: string, init: string?, options: DialogOptions
         opts.title = text
     end
     return zenity.textInfo({
-        editable = true
+        editable = true,
     }, opts)
 end
 
-function dialog.combo(text: string, items: {string}, options: DialogOptions?)
+function dialog.combo(text: string, items: { string }, options: DialogOptions?)
     if PREFERRED_INTERFACE == "kdialog" then
         return kdialog.comboBox(text, items, nil, dialogToKdialog(options))
     end
-    return zenity.form({{
+    return zenity.form({ {
         type = "combo",
         name = text,
-        values = items
-    }})
+        values = items,
+    } })
 end
 
-function dialog.menu(text: string, items: {string}, options: DialogOptions?)
+function dialog.menu(text: string, items: { string }, options: DialogOptions?)
     if PREFERRED_INTERFACE == "kdialog" then
         return kdialog.menu(text, items, nil, dialogToKdialog(options))
     end
     local entries = {}
     for _, item in pairs(items) do
-        table.insert(entries, {"", item})
+        table.insert(entries, { "", item })
     end
-    return zenity.list(text, "radiolist", {"", ""}, entries, {
-        hidden_columns = {[1] = true}, hide_header=true
+    return zenity.list(text, "radiolist", { "", "" }, entries, {
+        hidden_columns = { [1] = true },
+        hide_header = true,
     }, dialogToZennity(options))
 end
 
 --- Follows zenity convention of `|` separated list of strings
-function dialog.checklist(text: string, items: {string}, options: DialogOptions?)
+function dialog.checklist(text: string, items: { string }, options: DialogOptions?)
     if PREFERRED_INTERFACE == "kdialog" then
         local indices = kdialog.checklist(text, items, {}, dialogToKdialog(options))
-        if not indices then return nil end
+        if not indices then
+            return nil
+        end
         local result = {}
         for index in indices do
             table.insert(result, items[index])
@@ -247,15 +256,15 @@ function dialog.checklist(text: string, items: {string}, options: DialogOptions?
     end
     local entries = {}
     for _, item in pairs(items) do
-        table.insert(entries, {"", item})
+        table.insert(entries, { "", item })
     end
-    return zenity.list(text, "checklist", {"", ""}, entries, {hide_header=true}, dialogToZennity(options))
+    return zenity.list(text, "checklist", { "", "" }, entries, { hide_header = true }, dialogToZennity(options))
 end
 
 --- Immediately sends a passive notification;
 --- prefer `notify-send` for more functionality.
 --- Timeout does nothing through zenity.
-function dialog.passiveNotification(text: string, timeout: number, icon:  string?, options: DialogOptions?)
+function dialog.passiveNotification(text: string, timeout: number, icon: string?, options: DialogOptions?)
     if PREFERRED_INTERFACE == "kdialog" then
         return kdialog.passivePopup(text, timeout, icon :: kdialog.KDialogPopupIcon?, dialogToKdialog(options))
     end
@@ -267,15 +276,20 @@ function dialog.passiveNotification(text: string, timeout: number, icon:  string
 end
 
 type DialogGetOptions = {
-    multiple:   boolean?,
-    directory:  boolean?,
-    save:       boolean?,
-    separator:  string?,
+    multiple: boolean?,
+    directory: boolean?,
+    save: boolean?,
+    separator: string?,
 }
 
 --- `multiple` is mutually exclusive with `directory` and `save`; will error if set to true when
 --- either of those are true as well.
-function dialog.fileSelection(startDir: string, filter: {string}?, get_options: DialogGetOptions?, options: DialogOptions?)
+function dialog.fileSelection(
+    startDir: string,
+    filter: { string }?,
+    get_options: DialogGetOptions?,
+    options: DialogOptions?
+)
     if get_options then
         assert(
             not ((get_options.save or get_options.directory) and get_options.multiple),
@@ -309,7 +323,7 @@ function DialogProgressBar:SetProgress(n: number)
         self.inner:SetProgress(n)
     end
 end
-function DialogProgressBar:GetProgress() : number
+function DialogProgressBar:GetProgress(): number
     return self.progress
 end
 function DialogProgressBar:Close()
@@ -327,17 +341,16 @@ end
 --- divides values given to :SetProgress by the initially given size and rounds down
 --- when setting the value of `zenity`'s progress bar.
 function dialog.progressBar(initial_text: string, size: number, autoclose: boolean?, options: DialogOptions?)
-    local inner = if PREFERRED_INTERFACE == "kdialog" then
-            kdialog.progressBar(initial_text, size, autoclose, dialogToKdialog(options))
-        else
-            zenity.progress(initial_text, 0, {auto_close=autoclose}, dialogToZennity(options))
+    local inner = if PREFERRED_INTERFACE == "kdialog"
+        then kdialog.progressBar(initial_text, size, autoclose, dialogToKdialog(options))
+        else zenity.progress(initial_text, 0, { auto_close = autoclose }, dialogToZennity(options))
     local interface = {
         type = PREFERRED_INTERFACE,
         inner = inner,
         size = size,
-        progress = 0
+        progress = 0,
     }
-    
+
     return setmetatable(interface, DialogProgressBar)
 end
 export type DialogProgressBar = typeof(dialog.progressBar("", 100, true))
@@ -346,7 +359,7 @@ export type DialogProgressBar = typeof(dialog.progressBar("", 100, true))
 --- the RGB triple as a tuple of the three numbers.
 --- Expected input and outputs are in the range 0-255.
 --- Errors if size of `default` is not 3.
-function dialog.color(default: {number}?, options: DialogOptions?)
+function dialog.color(default: { number }?, options: DialogOptions?)
     assert(not default or #default == 3, "default is expected to have size 3")
     if PREFERRED_INTERFACE == "kdialog" then
         local initial = if default then ("#%2X%2X%2X"):format(table.unpack(default)):gsub(" ", "0") else nil
@@ -376,11 +389,10 @@ function dialog.slider(text: string, min: number, max: number, step: number, opt
     return zenity.scale(text, min, max, step, math.floor(min / max), dialogToZennity(options))
 end
 
-function dialog.calendar(text: string, options: DialogOptions?) : DateTime.DateTime?
-    local out = if PREFERRED_INTERFACE == "kdialog" then
-            kdialog.calendar(text, "dd MM yyyy", dialogToKdialog(options))
-        else
-            zenity.calendar(text, nil, nil, nil, "%d %m %Y")
+function dialog.calendar(text: string, options: DialogOptions?): DateTime.DateTime?
+    local out = if PREFERRED_INTERFACE == "kdialog"
+        then kdialog.calendar(text, "dd MM yyyy", dialogToKdialog(options))
+        else zenity.calendar(text, nil, nil, nil, "%d %m %Y")
 
     if out then
         local day, month, year = out:match("(%d+) (%d+) (%d+)")
@@ -388,7 +400,9 @@ function dialog.calendar(text: string, options: DialogOptions?) : DateTime.DateT
             year = tonumber(year),
             month = tonumber(month),
             day = tonumber(day),
-            hour = 0, minute = 0, second = 0
+            hour = 0,
+            minute = 0,
+            second = 0,
         })
     end
     return nil

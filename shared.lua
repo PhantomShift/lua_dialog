@@ -5,8 +5,8 @@ return {
         local r = path:gsub("^~", process.env.HOME)
         return r
     end,
-    
+
     clean = function(s: string)
         return s:match("^(.-)\n*$") :: string
-    end
+    end,
 }
